@@ -41,6 +41,7 @@ const createTables = async () => {
       DROP TABLE IF EXISTS assign_shift CASCADE;
       DROP TABLE IF EXISTS warning_letter CASCADE;
       DROP TABLE IF EXISTS termination_letter CASCADE;
+      DROP TABLE IF EXISTS resignation_letter CASCADE;
       DROP TABLE IF EXISTS face_descriptor CASCADE;
       DROP TABLE IF EXISTS payroll CASCADE;
       DROP TABLE IF EXISTS salary_details CASCADE;
@@ -1153,6 +1154,32 @@ const createTables = async () => {
           FOREIGN KEY (issued_by)
           REFERENCES users(id)
           ON DELETE SET NULL
+      );
+    `);
+
+    // =====================================
+    // RESIGNATION LETTER TABLE
+    // =====================================
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS resignation_letter (
+
+        id SERIAL PRIMARY KEY,
+
+        user_id INTEGER NOT NULL,
+
+        subject TEXT,
+
+        description TEXT,
+
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        CONSTRAINT fk_resignation_letter_user
+          FOREIGN KEY (user_id)
+          REFERENCES users(id)
+          ON DELETE CASCADE
       );
     `);
 

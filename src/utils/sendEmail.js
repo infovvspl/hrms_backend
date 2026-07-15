@@ -159,7 +159,25 @@ const sendTerminationEmail = async ({
   });
 };
 
+const sendResignationEmail = async ({
+  toEmail,
+  employeeName,
+  employeeEmail,
+  companyName,
+  subject,
+  description,
+}) => {
+  await transporter.sendMail({
+    from: `"${employeeName} (via ${companyName})" <${process.env.EMAIL_USER}>`,
+    to: toEmail,
+    replyTo: employeeEmail,
+    subject: subject,
+    html: description
+  });
+};
+
 sendOtpEmail.sendWarningEmail = sendWarningEmail;
 sendOtpEmail.sendTerminationEmail = sendTerminationEmail;
+sendOtpEmail.sendResignationEmail = sendResignationEmail;
 
 module.exports = sendOtpEmail;
