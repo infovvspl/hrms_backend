@@ -2,7 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const { login, logout, getLoginHistory } = require("../controllers/authController");
+const { login, logout } = require("../controllers/authController");
 const authmiddleware = require("../middleware/authmiddleware");
 
 // ===============================
@@ -10,10 +10,7 @@ const authmiddleware = require("../middleware/authmiddleware");
 // ===============================
 router.post("/login", login);
 
-// ===============================
-// LOGIN HISTORY
-// ===============================
-router.get("/login-history", authmiddleware, getLoginHistory);
+
 
 // ===============================
 // LOGOUT (POST - JWT)

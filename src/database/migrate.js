@@ -13,7 +13,6 @@ const createTables = async () => {
     // =====================================
 
     await client.query(`
-      DROP TABLE IF EXISTS login_history CASCADE;
       DROP TABLE IF EXISTS otp CASCADE;
       DROP TABLE IF EXISTS users CASCADE;
       DROP TABLE IF EXISTS documents CASCADE;
@@ -1202,32 +1201,7 @@ const createTables = async () => {
         ON DELETE SET NULL;
     `);
 
-    // =====================================
-    // LOGIN HISTORY TABLE
-    // =====================================
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS login_history (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER,
-        login_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        logout_at TIMESTAMP,
-        ipaddress VARCHAR(45),
-        device_info TEXT,
-        os VARCHAR(50),
-        browser VARCHAR(50),
-        longitude VARCHAR(50),
-        lattitude VARCHAR(50),
-        login_status VARCHAR(20),
-        failure_reason TEXT,
-        session_id VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        
-        CONSTRAINT fk_login_history_users
-          FOREIGN KEY(user_id)
-          REFERENCES users(id)
-          ON DELETE CASCADE
-      );
-    `);
+
 
     await client.query("COMMIT");
 

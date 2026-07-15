@@ -3,56 +3,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const generateToken = require("../utils/generateToken");
 
-// ================= LOGIN LOGGING HELPER =================
-const logLoginAttempt = async (user_id, company_id, email, req, status, reason, longitude, latitude, session_id = null) => {
-  try {
-    const ipaddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
-    const ua = req.headers['user-agent'] || "";
-    
-    // Simple User Agent Parsing
-    let os = "Unknown OS";
-    if (/windows/i.test(ua)) os = "Windows";
-    else if (/macintosh|mac os x/i.test(ua)) os = "macOS";
-    else if (/linux/i.test(ua)) os = "Linux";
-    else if (/android/i.test(ua)) os = "Android";
-    else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
-
-    let browser = "Unknown Browser";
-    if (/edg/i.test(ua)) browser = "Edge";
-    else if (/opr/i.test(ua)) browser = "Opera";
-    else if (/chrome|crios/i.test(ua)) browser = "Chrome";
-    else if (/firefox|fxios/i.test(ua)) browser = "Firefox";
-    else if (/safari/i.test(ua)) browser = "Safari";
-
-    let device_info = "Desktop";
-    if (/mobile|android|iphone|ipad|ipod/i.test(ua)) {
-      device_info = "Mobile";
-    }
-
-    await pool.query(
-      `INSERT INTO login_history (
-        user_id, company_id, login_at, ipaddress, device_info, os, browser, 
-        longitude, lattitude, login_status, failure_reason, session_id
-      ) VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [
-        user_id,
-        company_id,
-        ipaddress,
-        device_info,
-        os,
-        browser,
-        longitude || null,
-        latitude || null,
-        status,
-        reason || null,
-        session_id
-      ]
-    );
-  } catch (err) {
-    console.error("ERROR LOGGING LOGIN ATTEMPT:", err);
-  }
-};
-
 // ================= EMAIL LOGIN =================
 exports.login = async (req, res) => {
   try {
@@ -78,7 +28,6 @@ exports.login = async (req, res) => {
       const user = userRes.rows[0];
 
       if (!user) {
-        await logLoginAttempt(null, null, email, req, 'Failed', 'Account not found', longitude, latitude);
         return res.status(400).json({
           success: false,
           message: "Account not found",
@@ -87,7 +36,6 @@ exports.login = async (req, res) => {
 
       // Check user password
       if (!user.password) {
-        await logLoginAttempt(user.id, user.company_id, email, req, 'Failed', 'Account password not configured', longitude, latitude);
         return res.status(400).json({
           success: false,
           message: "Account password not configured",
@@ -96,18 +44,13 @@ exports.login = async (req, res) => {
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        await logLoginAttempt(user.id, user.company_id, email, req, 'Failed', 'Invalid Credentials', longitude, latitude);
         return res.status(400).json({
           success: false,
           message: "Invalid Credentials",
         });
       }
 
-      // Generate a unique session ID
-      const session_id = require("crypto").randomBytes(16).toString("hex");
 
-      // Log successful login
-      await logLoginAttempt(user.id, user.company_id, email, req, 'Success', null, longitude, latitude, session_id);
 
       // Generate token for employee
       const tokenPayload = {
@@ -119,7 +62,6 @@ exports.login = async (req, res) => {
         role_name: user.role_name || "Employee",
         role: "employee",
         login_type: "email",
-        session_id: session_id,
       };
 
       const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
@@ -142,7 +84,6 @@ exports.login = async (req, res) => {
           role_id: user.role_id,
           role_name: user.role_name || "Employee",
           login_type: "email",
-          session_id: session_id,
         },
       });
     }
@@ -160,7 +101,6 @@ exports.login = async (req, res) => {
 
     // ================= EMAIL VERIFIED CHECK =================
     if (!company.is_verified) {
-      await logLoginAttempt(null, company.id, email, req, 'Failed', 'Please verify your email first', longitude, latitude);
       return res.status(400).json({
         success: false,
         message: "Please verify your email first",
@@ -170,7 +110,6 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, targetPassword);
 
     if (!isMatch) {
-      await logLoginAttempt(null, company.id, email, req, 'Failed', 'Invalid Credentials', longitude, latitude);
       return res.status(400).json({
         success: false,
         message: "Invalid Credentials",
@@ -192,9 +131,7 @@ exports.login = async (req, res) => {
     // Update local object to reflect the database update
     company.login_type = 'email';
 
-    // Generate session ID for company login
-    const session_id = require("crypto").randomBytes(16).toString("hex");
-    await logLoginAttempt(null, company.id, email, req, 'Success', null, longitude, latitude, session_id);
+
 
     // ================= GENERATE TOKEN =================
     const tokenPayload = {
@@ -203,7 +140,6 @@ exports.login = async (req, res) => {
       email: company.email,
       role: "company",
       login_type: company.login_type || "email",
-      session_id: session_id,
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
@@ -251,47 +187,9 @@ exports.login = async (req, res) => {
 // ================= LOGOUT =================
 exports.logout = async (req, res) => {
   try {
-    const { session_id } = req.user || {};
-    if (session_id) {
-      await pool.query(
-        "UPDATE login_history SET logout_at = CURRENT_TIMESTAMP WHERE session_id = $1",
-        [session_id]
-      );
-    }
     res.status(200).json({ success: true, message: "Logged out successfully" });
   } catch (error) {
     console.error("LOGOUT ERROR:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-};
-
-// ================= GET LOGIN HISTORY =================
-exports.getLoginHistory = async (req, res) => {
-  try {
-    const companyId = req.companyId;
-    if (!companyId) {
-      return res.status(400).json({ success: false, message: "Company ID not found in session" });
-    }
-
-    if (req.user.role !== "company") {
-      return res.status(403).json({ success: false, message: "Access denied. Admin only." });
-    }
-
-    const result = await pool.query(
-      `SELECT lh.*, 
-              u.first_name, u.last_name, u.email as user_email, u.company_employee_id,
-              c.company_name, c.email as company_email
-       FROM login_history lh
-       LEFT JOIN users u ON lh.user_id = u.id
-       LEFT JOIN company c ON lh.company_id = c.id
-       WHERE lh.company_id = $1
-       ORDER BY lh.login_at DESC`,
-      [companyId]
-    );
-
-    res.status(200).json({ success: true, loginHistory: result.rows });
-  } catch (error) {
-    console.error("GET LOGIN HISTORY ERROR:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
