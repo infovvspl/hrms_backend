@@ -2526,3 +2526,289 @@ exports.downloadEmployeeTerminationLetterPdf = async (req, res) => {
   }
 };
 
+// =================================
+// GET EMPLOYEE RESIGNATION LETTERS
+// =================================
+exports.getEmployeeResignationLetters = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const role = req.user.role;
+
+    // Security check: employees can only fetch their own resignation letters
+    if (role === "employee" && Number(id) !== Number(user_id)) {
+      return res.status(403).json({ success: false, message: "Unauthorized access to resignation details" });
+    }
+
+    const result = await pool.query(
+      `SELECT r.*, 
+              CONCAT(u.first_name, ' ', u.last_name) AS employee_name
+       FROM resignation_letter r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.user_id = $1
+       ORDER BY r.created_at DESC`,
+      [id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      resignation_letters: result.rows
+    });
+  } catch (error) {
+    console.error("Get Employee Resignation Letters Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch resignation letters", error: error.message });
+  }
+};
+
+// =================================
+// CREATE EMPLOYEE RESIGNATION LETTER (SUBMIT)
+// =================================
+exports.createEmployeeResignationLetter = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const role = req.user.role;
+    const { subject, description } = req.body;
+
+    // Security check: employees can only submit their own resignation letters
+    if (role === "employee" && Number(id) !== Number(user_id)) {
+      return res.status(403).json({ success: false, message: "Unauthorized to submit resignation for another employee" });
+    }
+
+    if (!subject || !description) {
+      return res.status(400).json({ success: false, message: "Subject and Description are required" });
+    }
+
+    // 1. Fetch employee details and company info
+    const employeeRes = await pool.query(
+      `SELECT u.first_name, u.last_name, u.email, u.company_id, c.company_name
+       FROM users u
+       LEFT JOIN company c ON u.company_id = c.id
+       WHERE u.id = $1`,
+      [id]
+    );
+
+    if (employeeRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Employee not found" });
+    }
+
+    const employee = employeeRes.rows[0];
+
+    // 2. Fetch HR Manager details
+    const hrManagerRes = await pool.query(
+      `SELECT u.work_email, u.email, CONCAT(u.first_name, ' ', u.last_name) AS hr_name
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.company_id = $1 AND r.role_name = 'HR Manager'
+       LIMIT 1`,
+      [employee.company_id]
+    );
+
+    let hrEmail;
+    let hrName = "HR Manager";
+
+    if (hrManagerRes.rows.length > 0) {
+      hrEmail = hrManagerRes.rows[0].work_email || hrManagerRes.rows[0].email;
+      hrName = hrManagerRes.rows[0].hr_name;
+    } else {
+      const companyRes = await pool.query(
+        `SELECT email, company_name FROM company WHERE id = $1`,
+        [employee.company_id]
+      );
+      if (companyRes.rows.length > 0) {
+        hrEmail = companyRes.rows[0].email;
+        hrName = `${companyRes.rows[0].company_name} HR`;
+      } else {
+        hrEmail = "admin@technova.com";
+      }
+    }
+
+    // 3. Save resignation letter to database
+    const result = await pool.query(
+      `INSERT INTO resignation_letter (user_id, subject, description)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [id, subject, description]
+    );
+
+    // 4. Send email to HR Manager
+    try {
+      const sendEmail = require("../utils/sendEmail");
+      await sendEmail.sendResignationEmail({
+        toEmail: hrEmail,
+        employeeName: `${employee.first_name} ${employee.last_name}`,
+        employeeEmail: employee.email,
+        companyName: employee.company_name || "Zenova HR Partner",
+        subject: subject,
+        description: description,
+      });
+    } catch (emailErr) {
+      console.error("Resignation email sending failed, but DB record was saved:", emailErr);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Resignation letter submitted and email sent successfully",
+      resignation_letter: result.rows[0],
+      sent_to: {
+        name: hrName,
+        email: hrEmail
+      }
+    });
+  } catch (error) {
+    console.error("Create Employee Resignation Letter Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to submit resignation letter", error: error.message });
+  }
+};
+
+// =================================
+// GET EMPLOYEE'S HR MANAGER
+// =================================
+exports.getEmployeeHrManager = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const role = req.user.role;
+
+    if (role === "employee" && Number(id) !== Number(user_id)) {
+      return res.status(403).json({ success: false, message: "Unauthorized access to employee details" });
+    }
+
+    // 1. Get employee's company ID
+    const employeeRes = await pool.query(
+      `SELECT company_id FROM users WHERE id = $1`,
+      [id]
+    );
+
+    if (employeeRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Employee not found" });
+    }
+
+    const company_id = employeeRes.rows[0].company_id;
+
+    // 2. Query HR Manager for this company
+    const hrManagerRes = await pool.query(
+      `SELECT u.work_email, u.email, CONCAT(u.first_name, ' ', u.last_name) AS hr_name
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.company_id = $1 AND r.role_name = 'HR Manager'
+       LIMIT 1`,
+      [company_id]
+    );
+
+    let hr_name = "HR Manager";
+    let email = "";
+
+    if (hrManagerRes.rows.length > 0) {
+      hr_name = hrManagerRes.rows[0].hr_name;
+      email = hrManagerRes.rows[0].work_email || hrManagerRes.rows[0].email;
+    } else {
+      // Fallback to company email
+      const companyRes = await pool.query(
+        `SELECT company_name, email FROM company WHERE id = $1`,
+        [company_id]
+      );
+      if (companyRes.rows.length > 0) {
+        hr_name = `${companyRes.rows[0].company_name} HR`;
+        email = companyRes.rows[0].email;
+      } else {
+        email = "admin@technova.com";
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      hr_manager: {
+        name: hr_name,
+        email: email
+      }
+    });
+  } catch (error) {
+    console.error("Get Employee's HR Manager Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch HR Manager details", error: error.message });
+  }
+};
+
+// =================================
+// GET ALL COMPANY RESIGNATION LETTERS
+// =================================
+exports.getAllResignationLetters = async (req, res) => {
+  try {
+    const role = req.user.role;
+    const company_id = req.user.company_id;
+
+    // Security check: only company admins or HR can fetch all resignation letters
+    if (role !== "company" && req.user.role_name !== "Super Admin" && req.user.role_name !== "HR Manager") {
+      return res.status(403).json({ success: false, message: "Unauthorized access to company resignation letters" });
+    }
+
+    const result = await pool.query(
+      `SELECT r.*, 
+              CONCAT(u.first_name, ' ', u.last_name) AS employee_name,
+              u.company_employee_id,
+              u.email AS employee_email
+       FROM resignation_letter r
+       JOIN users u ON r.user_id = u.id
+       WHERE u.company_id = $1
+       ORDER BY r.created_at DESC`,
+      [company_id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      resignation_letters: result.rows
+    });
+  } catch (error) {
+    console.error("Get All Resignation Letters Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch resignation letters", error: error.message });
+  }
+};
+
+// =================================
+// GET RESIGNATION LETTER BY ID
+// =================================
+exports.getResignationLetterById = async (req, res) => {
+  try {
+    const { letterId } = req.params;
+    const user_id = req.user.id;
+    const role = req.user.role;
+    const company_id = req.user.company_id;
+
+    const result = await pool.query(
+      `SELECT r.*, 
+              CONCAT(u.first_name, ' ', u.last_name) AS employee_name,
+              u.company_id
+       FROM resignation_letter r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.id = $1`,
+      [letterId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Resignation letter not found" });
+    }
+
+    const letter = result.rows[0];
+
+    // Security check: employee can only see their own letter; company can see any letter in their company
+    if (role === "employee" && Number(letter.user_id) !== Number(user_id)) {
+      return res.status(403).json({ success: false, message: "Unauthorized access to resignation letter" });
+    }
+
+    if (role === "company" && Number(letter.company_id) !== Number(company_id)) {
+      return res.status(403).json({ success: false, message: "Unauthorized access to resignation letter" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      resignation_letter: letter
+    });
+  } catch (error) {
+    console.error("Get Resignation Letter By ID Error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch resignation letter", error: error.message });
+  }
+};
+
+
+
+

@@ -22,6 +22,11 @@ const {
   getEmployeeTerminationLetters,
   createEmployeeTerminationLetter,
   downloadEmployeeTerminationLetterPdf,
+  getEmployeeResignationLetters,
+  createEmployeeResignationLetter,
+  getEmployeeHrManager,
+  getAllResignationLetters,
+  getResignationLetterById,
   getLoggedBranding
 } = require("../controllers/userController");
 
@@ -60,5 +65,12 @@ router.get("/warning-letter/:letterId/download", downloadEmployeeWarningLetterPd
 router.get("/:id/termination-letters", auth, getEmployeeTerminationLetters);
 router.post("/:id/termination-letter", auth, createEmployeeTerminationLetter);
 router.get("/termination-letter/:letterId/download", downloadEmployeeTerminationLetterPdf);
+
+// Resignation Letters
+router.get("/:id/resignation-letters", auth, getEmployeeResignationLetters);
+router.post("/:id/resignation-letter", auth, createEmployeeResignationLetter);
+router.get("/:id/hr-manager", auth, getEmployeeHrManager);
+router.get("/resignations/all", auth, getAllResignationLetters);
+router.get("/resignation/:letterId", auth, getResignationLetterById);
 
 module.exports = router;
