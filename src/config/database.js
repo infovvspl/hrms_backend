@@ -14,13 +14,6 @@ const pool = new Pool({
 pool.connect()
   .then(async () => {
     console.log("Database connected");
-    try {
-      await pool.query(`ALTER TABLE payroll DROP COLUMN IF EXISTS status;`);
-      await pool.query(`ALTER TABLE payroll ADD COLUMN IF NOT EXISTS payslip_path TEXT;`);
-      console.log("Schema checked: payroll status column dropped and payslip_path column verified");
-    } catch (err) {
-      console.error("Database schema upgrade error:", err);
-    }
   })
   .catch((err) => console.error("Database connection error:", err));
 
