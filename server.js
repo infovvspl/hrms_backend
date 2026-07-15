@@ -82,7 +82,33 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // ================= DEBUG =================
+const fs = require("fs");
 app.use((req, res, next) => {
+  const logFile = path.join(__dirname, "debug_requests.log");
+  const logMsg = `\n🔥 [${new Date().toISOString()}] Incoming Request: ${req.method} ${req.url}
+Headers: ${JSON.stringify(req.headers)}
+BODY: ${JSON.stringify(req.body)}\n`;
+  fs.appendFileSync(logFile, logMsg);
+
+  // Capture response
+  const oldWrite = res.write;
+  const oldEnd = res.end;
+  const chunks = [];
+  res.write = (...args) => {
+    chunks.push(Buffer.from(args[0]));
+    return oldWrite.apply(res, args);
+  };
+  res.end = (...args) => {
+    if (args[0]) {
+      chunks.push(Buffer.from(args[0]));
+    }
+    const body = Buffer.concat(chunks).toString("utf8");
+    const respMsg = `↩️ [${new Date().toISOString()}] Response Status: ${res.statusCode}
+Response Body: ${body.substring(0, 1000)}\n`;
+    fs.appendFileSync(logFile, respMsg);
+    return oldEnd.apply(res, args);
+  };
+
   console.log(`\n🔥 Incoming Request: ${req.method} ${req.url}`);
 
   console.log("Content-Type:", req.headers["content-type"]);
@@ -125,6 +151,7 @@ const leaveTypeRoutes = require("./src/routes/leaveTypeRoutes");
 const leaveRoutes = require("./src/routes/leaveRoutes");
 const faceDescriptorRoutes = require("./src/routes/faceDescriptorRoutes");
 const payrollRoutes = require("./src/routes/payrollRoutes");
+const loginHistoryRoutes = require("./src/routes/loginHistoryRoutes");
 
 
 // ================= API ROUTES =================
@@ -157,6 +184,7 @@ app.use("/api/leave-types", leaveTypeRoutes);
 app.use("/api/leaves", leaveRoutes);
 app.use("/api/face-descriptor", faceDescriptorRoutes);
 app.use("/api/payroll", payrollRoutes);
+app.use("/api/login-history", loginHistoryRoutes);
 
 // ================= PROFILE ROUTE =================
 // app.get(
