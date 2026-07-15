@@ -420,7 +420,7 @@ const createTables = async () => {
 
         doe DATE,
 
-        onboarding_status VARCHAR(30) ,
+        status VARCHAR(30) ,
 
         created_by INTEGER,
 
