@@ -46,6 +46,7 @@ const createTables = async () => {
       DROP TABLE IF EXISTS payroll CASCADE;
       DROP TABLE IF EXISTS salary_details CASCADE;
       DROP TABLE IF EXISTS login_history CASCADE;
+      DROP TABLE IF EXISTS interview_mail CASCADE;
     `);
 
     // =====================================
@@ -281,6 +282,8 @@ const createTables = async () => {
         id SERIAL PRIMARY KEY,
 
         user_id INTEGER,
+        
+        resume TEXT,
 
         aadhar_card TEXT,
 
@@ -1269,6 +1272,35 @@ const createTables = async () => {
           REFERENCES users(id)
           ON DELETE CASCADE
       );
+    `);
+
+    // =====================================
+    // INTERVIEW MAIL TABLE
+    // =====================================
+
+    await client.query(`DROP TABLE IF EXISTS interview_mail;`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS interview_mail(
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        subject TEXT,
+        description TEXT,
+        issued_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_interview_mail_users
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+      );
+    `);
+
+    // =====================================
+    // DOCUMENTS TABLE UPDATE
+    // =====================================
+    await client.query(`
+      ALTER TABLE documents
+      ADD COLUMN IF NOT EXISTS resume TEXT;
     `);
 
     await client.query("COMMIT");

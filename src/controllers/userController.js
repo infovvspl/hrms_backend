@@ -128,7 +128,7 @@ exports.createEmployee = async (req, res) => {
       extension,
       seat_number,
       doe,
-      onboarding_status,
+      status,
       // Document fields
       aadhar_card,
       voter_card,
@@ -137,7 +137,8 @@ exports.createEmployee = async (req, res) => {
       pancard,
       experience_letter,
       relieveing_letter,
-      signatures
+      signatures,
+      resume
     } = req.body;
 
     const resolvedPancard = pancard || pan_card;
@@ -313,10 +314,10 @@ exports.createEmployee = async (req, res) => {
       `
       INSERT INTO documents (
         aadhar_card, voter_card, passport, pancard, 
-        offer_letter, experience_letter, relieveing_letter, signatures, 
+        offer_letter, experience_letter, relieveing_letter, signatures, resume,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id
       `,
       [
@@ -328,6 +329,7 @@ exports.createEmployee = async (req, res) => {
         experience_letter || null,
         relieveing_letter || null,
         signatures || null,
+        resume || null,
         created_by
       ]
     );
@@ -353,7 +355,7 @@ exports.createEmployee = async (req, res) => {
         aadhaar_number, voter_id, pan_number, passport_number, uan_number, pf_number, image,
         current_experience, total_experience, employment_status, reporting_manager,
         gender, marital_status, area_of_expertise, building_name, floor_number, extension, seat_number,
-        doe, onboarding_status, created_by
+        doe, status, created_by
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
         $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36,
@@ -411,7 +413,7 @@ exports.createEmployee = async (req, res) => {
         resolvedExtensionId || null,
         resolvedSeatId || null,
         doe || null,
-        onboarding_status || null,
+        status || null,
         created_by
       ]
     );
@@ -484,6 +486,7 @@ exports.getEmployees = async (req, res) => {
         d.experience_letter,
         d.relieveing_letter,
         d.signatures,
+        d.resume,
         b.name as branch_name,
         r.role_name,
         dept.department_name,
@@ -679,7 +682,7 @@ exports.updateEmployee = async (req, res) => {
       extension,
       seat_number,
       doe,
-      onboarding_status,
+      status,
       // Document fields
       aadhar_card,
       voter_card,
@@ -688,7 +691,8 @@ exports.updateEmployee = async (req, res) => {
       pancard,
       experience_letter,
       relieveing_letter,
-      signatures
+      signatures,
+      resume
     } = req.body;
 
     const resolvedPancard = pancard || pan_card;
@@ -939,9 +943,10 @@ exports.updateEmployee = async (req, res) => {
           experience_letter = COALESCE($6, experience_letter),
           relieveing_letter = COALESCE($7, relieveing_letter),
           signatures = COALESCE($8, signatures),
-          updated_by = $9,
+          resume = COALESCE($9, resume),
+          updated_by = $10,
           updated_at = NOW()
-        WHERE id = $10
+        WHERE id = $11
         `,
         [
           aadhar_card !== undefined ? aadhar_card : null,
@@ -952,6 +957,7 @@ exports.updateEmployee = async (req, res) => {
           experience_letter !== undefined ? experience_letter : null,
           relieveing_letter !== undefined ? relieveing_letter : null,
           signatures !== undefined ? signatures : null,
+          resume !== undefined ? resume : null,
           updated_by,
           document_id
         ]
@@ -962,10 +968,10 @@ exports.updateEmployee = async (req, res) => {
         `
         INSERT INTO documents (
           user_id, aadhar_card, voter_card, passport, pancard, 
-          offer_letter, experience_letter, relieveing_letter, signatures, 
+          offer_letter, experience_letter, relieveing_letter, signatures, resume,
           created_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id
         `,
         [
@@ -978,6 +984,7 @@ exports.updateEmployee = async (req, res) => {
           experience_letter || null,
           relieveing_letter || null,
           signatures || null,
+          resume || null,
           updated_by
         ]
       );
@@ -1036,7 +1043,7 @@ exports.updateEmployee = async (req, res) => {
         extension = COALESCE($45, extension),
         seat_number = COALESCE($46, seat_number),
         doe = COALESCE($47, doe),
-        onboarding_status = COALESCE($48, onboarding_status),
+        status = COALESCE($48, status),
         emergency_contact_name = COALESCE($49, emergency_contact_name),
         emergency_contact_relation = COALESCE($50, emergency_contact_relation),
         emergency_contact_phone = COALESCE($51, emergency_contact_phone),
@@ -1093,7 +1100,7 @@ exports.updateEmployee = async (req, res) => {
         resolvedExtensionId !== undefined ? resolvedExtensionId : null,
         resolvedSeatId !== undefined ? resolvedSeatId : null,
         doe !== undefined ? doe : null,
-        onboarding_status !== undefined ? onboarding_status : null,
+        status !== undefined ? status : null,
         emergency_contact_name !== undefined ? emergency_contact_name : null,
         emergency_contact_relation !== undefined ? emergency_contact_relation : null,
         emergency_contact_phone !== undefined ? emergency_contact_phone : null,
