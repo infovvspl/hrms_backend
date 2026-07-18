@@ -47,6 +47,7 @@ const createTables = async () => {
       DROP TABLE IF EXISTS salary_details CASCADE;
       DROP TABLE IF EXISTS login_history CASCADE;
       DROP TABLE IF EXISTS interview_mail CASCADE;
+      DROP TABLE IF EXISTS asset_repair CASCADE;
     `);
 
     // =====================================
@@ -625,10 +626,18 @@ const createTables = async () => {
 
     CREATE TABLE IF NOT EXISTS asset (
         id SERIAL PRIMARY KEY,
-       
+
         branch_id INTEGER,
 
         asset_name VARCHAR(255) NOT NULL,
+
+        purchase_date DATE,
+
+        vendor_name VARCHAR(255),
+
+        price NUMERIC(15,2) DEFAULT 0.00,
+
+        bill TEXT,
 
         created_by INTEGER,
 
@@ -638,7 +647,7 @@ const createTables = async () => {
 
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-        CONSTRAINT fk_user_branch
+        CONSTRAINT fk_asset_branch
         FOREIGN KEY(branch_id)
         REFERENCES branch(id)
         ON DELETE SET NULL
@@ -677,6 +686,43 @@ const createTables = async () => {
             ON DELETE CASCADE
           );
         `);
+
+    // =====================================
+    // ASSET REPAIR TABLE
+    // =====================================
+
+    await client.query(`
+
+    CREATE TABLE IF NOT EXISTS asset_repair (
+        id SERIAL PRIMARY KEY,
+
+        asset_id INTEGER NOT NULL,
+
+        repair_date DATE,
+
+        vendor_name VARCHAR(255),
+
+        repair_price NUMERIC(15,2) DEFAULT 0.00,
+
+        description TEXT,
+
+        repair_done_by INTEGER,
+
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        CONSTRAINT fk_asset_repair_asset
+          FOREIGN KEY (asset_id)
+          REFERENCES asset(id)
+          ON DELETE CASCADE,
+
+        CONSTRAINT fk_asset_repair_done_by
+          FOREIGN KEY (repair_done_by)
+          REFERENCES users(id)
+          ON DELETE SET NULL
+        );
+     `);
 
     // =====================================
     // SHIFT TABLE

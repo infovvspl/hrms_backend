@@ -127,6 +127,7 @@ const faceDescriptorRoutes = require("./src/routes/faceDescriptorRoutes");
 const payrollRoutes = require("./src/routes/payrollRoutes");
 const loginHistoryRoutes = require("./src/routes/loginHistoryRoutes");
 const resumeAnalyserRoutes = require("./src/routes/resumeAnalyserRoutes");
+const assetRoutes = require("./src/routes/assetRoutes");
 
 
 // ================= API ROUTES =================
@@ -161,6 +162,8 @@ app.use("/api/face-descriptor", faceDescriptorRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/login-history", loginHistoryRoutes);
 app.use("/api/resume-analyser", resumeAnalyserRoutes);
+app.use("/api/assets", assetRoutes);
+
 
 // ================= PROFILE ROUTE =================
 // app.get(

@@ -1,29 +1,49 @@
 const nodemailer = require("nodemailer");
 
-const transporter = nodemailer.createTransport({
+// Admin transporter — used for OTP, warning, termination, resignation emails
+const adminTransporter = nodemailer.createTransport({
   service: "gmail",
-
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER_ADMIN,
+    pass: process.env.EMAIL_PASS_ADMIN,
   },
-
   tls: {
     rejectUnauthorized: false,
   },
 });
-transporter.verify((error, success) => {
+
+// HR transporter — used for interview scheduling emails
+const hrTransporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER_HR,
+    pass: process.env.EMAIL_PASS_HR,
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
+adminTransporter.verify((error) => {
   if (error) {
-    console.log("SMTP Error:", error);
+    console.log("Admin SMTP Error:", error);
   } else {
-    console.log("SMTP Server is ready.");
+    console.log("Admin SMTP Server is ready.");
+  }
+});
+
+hrTransporter.verify((error) => {
+  if (error) {
+    console.log("HR SMTP Error:", error);
+  } else {
+    console.log("HR SMTP Server is ready.");
   }
 });
 const sendOtpEmail = async (email, otp) => {
 
-  await transporter.sendMail({
+  await adminTransporter.sendMail({
 
-    from: `"Zenova HR" <${process.env.EMAIL_USER}>`,
+    from: `"Zenova HR" <${process.env.EMAIL_USER_ADMIN}>`,
 
     to: email,
 
@@ -136,9 +156,9 @@ const sendWarningEmail = async ({
   warningDate,
   issuedBy,
 }) => {
-  await transporter.sendMail({
+  await adminTransporter.sendMail({
 
-    from: `"${companyName} HR" <${process.env.EMAIL_USER}>`,
+    from: `"${companyName} HR" <${process.env.EMAIL_USER_ADMIN}>`,
     to: email,
     subject: subject,
     html: description
@@ -151,8 +171,8 @@ const sendTerminationEmail = async ({
   subject,
   description,
 }) => {
-  await transporter.sendMail({
-    from: `"${companyName} HR" <${process.env.EMAIL_USER}>`,
+  await adminTransporter.sendMail({
+    from: `"${companyName} HR" <${process.env.EMAIL_USER_ADMIN}>`,
     to: email,
     subject: subject,
     html: description
@@ -167,10 +187,28 @@ const sendResignationEmail = async ({
   subject,
   description,
 }) => {
-  await transporter.sendMail({
-    from: `"${employeeName} (via ${companyName})" <${process.env.EMAIL_USER}>`,
+  await adminTransporter.sendMail({
+    from: `"${employeeName} (via ${companyName})" <${process.env.EMAIL_USER_ADMIN}>`,
     to: toEmail,
     replyTo: employeeEmail,
+    subject: subject,
+    html: description
+  });
+};
+
+const sendInterviewEmail = async ({
+  email,
+  companyName,
+  hrName,
+  fromEmail,
+  subject,
+  description,
+}) => {
+  const fromName = hrName ? hrName : `${companyName} HR`;
+  const senderEmail = fromEmail || process.env.EMAIL_USER_HR;
+  await hrTransporter.sendMail({
+    from: `"${fromName}" <${process.env.EMAIL_USER_HR}>`,
+    to: email,
     subject: subject,
     html: description
   });
@@ -179,5 +217,6 @@ const sendResignationEmail = async ({
 sendOtpEmail.sendWarningEmail = sendWarningEmail;
 sendOtpEmail.sendTerminationEmail = sendTerminationEmail;
 sendOtpEmail.sendResignationEmail = sendResignationEmail;
+sendOtpEmail.sendInterviewEmail = sendInterviewEmail;
 
 module.exports = sendOtpEmail;

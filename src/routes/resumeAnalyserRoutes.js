@@ -3,7 +3,13 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { analyseResumes, updateCandidateStatuses } = require("../controllers/resumeAnalyserController");
+const {
+  analyseResumes,
+  updateCandidateStatuses,
+  getShortlistedCandidates,
+  scheduleInterview,
+  getInterviewHistory
+} = require("../controllers/resumeAnalyserController");
 const authMiddleware = require("../middleware/authmiddleware");
 
 // ================= MULTER CONFIG =================
@@ -56,5 +62,14 @@ router.post("/analyse", authMiddleware, upload.array("resumes", 20), analyseResu
 
 // POST /api/resume-analyser/update-statuses
 router.post("/update-statuses", authMiddleware, updateCandidateStatuses);
+
+// GET /api/resume-analyser/shortlisted
+router.get("/shortlisted", authMiddleware, getShortlistedCandidates);
+
+// POST /api/resume-analyser/schedule-interview
+router.post("/schedule-interview", authMiddleware, scheduleInterview);
+
+// GET /api/resume-analyser/interview-history
+router.get("/interview-history", authMiddleware, getInterviewHistory);
 
 module.exports = router;

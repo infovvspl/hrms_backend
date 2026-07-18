@@ -424,4 +424,209 @@ const updateCandidateStatuses = async (req, res) => {
   }
 };
 
-module.exports = { analyseResumes, updateCandidateStatuses };
+// ================= GET SHORTLISTED CANDIDATES =================
+const getShortlistedCandidates = async (req, res) => {
+  try {
+    const company_id = req.user?.company_id || null;
+    if (!company_id) {
+      return res.status(401).json({ success: false, message: "Unauthorized. Company ID missing." });
+    }
+
+    const query = `
+      SELECT u.id, u.first_name, u.last_name, u.email, u.status, u.created_at, d.resume
+      FROM users u
+      LEFT JOIN documents d ON u.document_id = d.id
+      WHERE u.company_id = $1 AND u.status = 'Shortlisted'
+      ORDER BY u.created_at DESC
+    `;
+    const result = await pool.query(query, [company_id]);
+
+    return res.status(200).json({
+      success: true,
+      candidates: result.rows,
+    });
+  } catch (error) {
+    console.error("Get shortlisted candidates error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error fetching shortlisted candidates.",
+      error: error.message,
+    });
+  }
+};
+
+// ================= SCHEDULE INTERVIEW =================
+const sendEmail = require("../utils/sendEmail");
+
+const scheduleInterview = async (req, res) => {
+  try {
+    const { candidateIds, subject, description } = req.body;
+    const company_id = req.user?.company_id || null;
+    const issued_by = req.user?.id || null;
+
+    if (!company_id) {
+      return res.status(401).json({ success: false, message: "Unauthorized. Company ID missing." });
+    }
+
+    if (!Array.isArray(candidateIds) || candidateIds.length === 0) {
+      return res.status(400).json({ success: false, message: "candidateIds must be a non-empty array." });
+    }
+
+    if (!subject || !subject.trim()) {
+      return res.status(400).json({ success: false, message: "Subject is required." });
+    }
+
+    if (!description || !description.trim()) {
+      return res.status(400).json({ success: false, message: "Description is required." });
+    }
+
+    // Fetch company name & email
+    const companyRes = await pool.query("SELECT company_name, email FROM company WHERE id = $1", [company_id]);
+    const companyName = companyRes.rows[0]?.company_name || "Zenova HR";
+    const companyEmail = companyRes.rows[0]?.email || null;
+
+    // Fetch HR name & email
+    let hrName = "";
+    let hrEmail = "";
+    if (req.user?.role === "employee" && issued_by) {
+      // 1. If logged in as an employee/HR, use their name & email
+      const userRes = await pool.query("SELECT first_name, last_name, email, work_email FROM users WHERE id = $1", [issued_by]);
+      if (userRes.rows.length > 0) {
+        hrName = `${userRes.rows[0].first_name || ""} ${userRes.rows[0].last_name || ""}`.trim();
+        hrEmail = userRes.rows[0].work_email || userRes.rows[0].email;
+      }
+    }
+
+    // 2. If logged in as company (or if the employee name wasn't found), get the HR Manager of the company
+    if (!hrName && company_id) {
+      const hrRes = await pool.query(
+        `SELECT u.first_name, u.last_name, u.email, u.work_email 
+         FROM users u
+         JOIN roles r ON u.role_id = r.id
+         WHERE u.company_id = $1 AND r.role_name = 'HR Manager'
+         LIMIT 1`,
+        [company_id]
+      );
+      if (hrRes.rows.length > 0) {
+        hrName = `${hrRes.rows[0].first_name || ""} ${hrRes.rows[0].last_name || ""}`.trim();
+        hrEmail = hrRes.rows[0].work_email || hrRes.rows[0].email;
+      }
+    }
+
+    // 3. Fallback: If still not found, try any user in the company
+    if (!hrName && company_id) {
+      const anyUserRes = await pool.query(
+        `SELECT first_name, last_name, email, work_email FROM users WHERE company_id = $1 LIMIT 1`,
+        [company_id]
+      );
+      if (anyUserRes.rows.length > 0) {
+        hrName = `${anyUserRes.rows[0].first_name || ""} ${anyUserRes.rows[0].last_name || ""}`.trim();
+        hrEmail = anyUserRes.rows[0].work_email || anyUserRes.rows[0].email;
+      }
+    }
+
+    const fromEmail = hrEmail || companyEmail;
+
+    // Fetch candidates emails
+    const candidatesRes = await pool.query(
+      "SELECT id, first_name, last_name, email FROM users WHERE id = ANY($1::int[]) AND company_id = $2",
+      [candidateIds, company_id]
+    );
+
+    const candidates = candidatesRes.rows;
+    if (candidates.length === 0) {
+      return res.status(400).json({ success: false, message: "No valid candidates found." });
+    }
+
+    const emailPromises = [];
+    const dbPromises = [];
+
+    for (const candidate of candidates) {
+      const candidateName = `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim();
+      
+      // Personalize template if placeholders exist
+      let personalizedDesc = description
+        .replace(/\[Candidate Name\]/g, candidateName)
+        .replace(/\[Company Name\]/g, companyName)
+        .replace(/\[HR Name\]/g, hrName || "HR Manager");
+
+      // Send email
+      emailPromises.push(
+        sendEmail.sendInterviewEmail({
+          email: candidate.email,
+          companyName,
+          hrName,
+          fromEmail,
+          subject,
+          description: personalizedDesc,
+        })
+      );
+
+      // Save to database
+      dbPromises.push(
+        pool.query(
+          `INSERT INTO interview_mail (user_id, subject, description, issued_by)
+           VALUES ($1, $2, $3, $4)`,
+          [candidate.id, subject, personalizedDesc, issued_by]
+        )
+      );
+    }
+
+    await Promise.all(emailPromises);
+    await Promise.all(dbPromises);
+
+    return res.status(200).json({
+      success: true,
+      message: `Interview invitation sent successfully to ${candidates.length} candidate(s).`,
+    });
+  } catch (error) {
+    console.error("Schedule interview error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error scheduling interview.",
+      error: error.message,
+    });
+  }
+};
+
+// ================= GET INTERVIEW HISTORY =================
+const getInterviewHistory = async (req, res) => {
+  try {
+    const company_id = req.user?.company_id || null;
+    if (!company_id) {
+      return res.status(401).json({ success: false, message: "Unauthorized. Company ID missing." });
+    }
+
+    const query = `
+      SELECT im.id, im.subject, im.description, im.created_at,
+             u.first_name, u.last_name, u.email as candidate_email,
+             hr.first_name as hr_first_name, hr.last_name as hr_last_name
+      FROM interview_mail im
+      JOIN users u ON im.user_id = u.id
+      LEFT JOIN users hr ON im.issued_by = hr.id
+      WHERE u.company_id = $1
+      ORDER BY im.created_at DESC
+    `;
+    const result = await pool.query(query, [company_id]);
+
+    return res.status(200).json({
+      success: true,
+      history: result.rows,
+    });
+  } catch (error) {
+    console.error("Get interview history error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error fetching interview history.",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  analyseResumes,
+  updateCandidateStatuses,
+  getShortlistedCandidates,
+  scheduleInterview,
+  getInterviewHistory
+};
