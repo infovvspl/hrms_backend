@@ -11,6 +11,7 @@ const {
   // Asset Assign
   assignAsset,
   getAssignments,
+  getMyAssets,
   updateAssignment,
   deleteAssignment,
   // Asset Repair
@@ -26,6 +27,7 @@ const billUpload = require("../middleware/billUpload");
 // ============================
 // ASSET ASSIGN ROUTES  (must be before /:id to avoid collision)
 // ============================
+router.get("/assign/me", auth, getMyAssets);
 router.post("/assign/create", auth, assignAsset);
 router.get("/assign/list", auth, getAssignments);
 router.put("/assign/:id", auth, updateAssignment);

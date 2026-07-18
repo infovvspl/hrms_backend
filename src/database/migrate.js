@@ -667,6 +667,8 @@ const createTables = async () => {
 
         asset_id INTEGER NOT NULL,
 
+        assign_date DATE DEFAULT CURRENT_DATE,
+
         created_by INTEGER,
 
         updated_by INTEGER,

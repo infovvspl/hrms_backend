@@ -160,7 +160,7 @@ exports.deleteAsset = async (req, res) => {
 // =================================
 exports.assignAsset = async (req, res) => {
   try {
-    const { user_id, asset_id } = req.body;
+    const { user_id, asset_id, assign_date } = req.body;
     const created_by = req.user.id;
 
     if (!user_id || !asset_id) {
@@ -182,10 +182,10 @@ exports.assignAsset = async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO asset_assign (user_id, asset_id, created_by, updated_by)
-       VALUES ($1,$2,$3,$3)
+      `INSERT INTO asset_assign (user_id, asset_id, assign_date, created_by, updated_by)
+       VALUES ($1,$2,$3,$4,$4)
        RETURNING *`,
-      [user_id, asset_id, created_by]
+      [user_id, asset_id, assign_date || null, created_by]
     );
 
     res.status(201).json({
@@ -229,20 +229,46 @@ exports.getAssignments = async (req, res) => {
 };
 
 // =================================
+// GET ASSIGNMENTS FOR LOGGED-IN EMPLOYEE
+// =================================
+exports.getMyAssets = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+
+    const result = await pool.query(
+      `SELECT aa.id,
+              aa.assign_date,
+              aa.created_at,
+              a.asset_name
+       FROM asset_assign aa
+       JOIN asset a ON aa.asset_id = a.id
+       WHERE aa.user_id = $1
+       ORDER BY aa.id DESC`,
+      [user_id]
+    );
+
+    res.status(200).json({ success: true, assets: result.rows });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// =================================
 // UPDATE ASSIGNMENT
 // =================================
 exports.updateAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { user_id, asset_id } = req.body;
+    const { user_id, asset_id, assign_date } = req.body;
     const updated_by = req.user.id;
 
     const result = await pool.query(
       `UPDATE asset_assign
-       SET user_id=$1, asset_id=$2, updated_by=$3, updated_at=NOW()
-       WHERE id=$4
+       SET user_id=$1, asset_id=$2, assign_date=$3, updated_by=$4, updated_at=NOW()
+       WHERE id=$5
        RETURNING *`,
-      [user_id, asset_id, updated_by, id]
+      [user_id, asset_id, assign_date || null, updated_by, id]
     );
 
     if (result.rows.length === 0) {
