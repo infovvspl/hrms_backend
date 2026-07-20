@@ -7,6 +7,7 @@ const generateToken = (company) => {
       company_id: company.id, 
       company_name: company.company_name,
       email: company.email,
+      role: "company",
       login_type: company.login_type || "email",
     },
     process.env.JWT_SECRET,

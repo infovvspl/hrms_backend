@@ -48,6 +48,9 @@ const createTables = async () => {
       DROP TABLE IF EXISTS login_history CASCADE;
       DROP TABLE IF EXISTS interview_mail CASCADE;
       DROP TABLE IF EXISTS asset_repair CASCADE;
+      DROP TABLE IF EXISTS travel CASCADE;
+      DROP TABLE IF EXISTS role_permissions CASCADE;
+      DROP TABLE IF EXISTS permissions CASCADE;
     `);
 
     // =====================================
@@ -212,6 +215,48 @@ const createTables = async () => {
         FOREIGN KEY(company_id)
         REFERENCES company(id)
         ON DELETE CASCADE
+      );
+    `);
+    // =====================================
+    // PERMISSIONS TABLE
+    // =====================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS permissions (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_by INTEGER,
+        updated_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_permissions_company
+          FOREIGN KEY (company_id)
+          REFERENCES company(id)
+          ON DELETE CASCADE
+      );
+    `);
+
+    // =====================================
+    // ROLE PERMISSIONS TABLE
+    // =====================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS role_permissions (
+        id SERIAL PRIMARY KEY,
+        role_id INTEGER NOT NULL,
+        permission_id INTEGER NOT NULL,
+        created_by INTEGER,
+        updated_by INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_role_permissions_role
+          FOREIGN KEY (role_id)
+          REFERENCES roles(id)
+          ON DELETE CASCADE,
+        CONSTRAINT fk_role_permissions_permission
+          FOREIGN KEY (permission_id)
+          REFERENCES permissions(id)
+          ON DELETE CASCADE
       );
     `);
 
@@ -872,6 +917,7 @@ const createTables = async () => {
         gross_salary NUMERIC(15,2) DEFAULT 0.00,
         total_deductions NUMERIC(15,2) DEFAULT 0.00,
         net_salary NUMERIC(15,2) DEFAULT 0.00,
+        payslip_path TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT fk_payroll_users
@@ -1340,6 +1386,34 @@ const createTables = async () => {
         FOREIGN KEY(user_id)
         REFERENCES users(id)
         ON DELETE CASCADE
+      );
+    `);
+
+    // =====================================
+    // TRAVEL TABLE
+    // =====================================
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS travel (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        travel_from VARCHAR(255) NOT NULL,
+        travel_to VARCHAR(255) NOT NULL,
+        purpose TEXT,
+        total_amount NUMERIC(15, 2) DEFAULT 0.00,
+        status VARCHAR(50) DEFAULT 'Pending',
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        approved_by INTEGER,
+        bill TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_travel_user
+          FOREIGN KEY (user_id)
+          REFERENCES users(id)
+          ON DELETE CASCADE,
+        CONSTRAINT fk_travel_approved_by
+          FOREIGN KEY (approved_by)
+          REFERENCES users(id)
+          ON DELETE SET NULL
       );
     `);
 

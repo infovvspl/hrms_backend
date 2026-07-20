@@ -542,14 +542,11 @@ exports.generatePayslip = async (req, res) => {
     // 10. Convert HTML to PDF using Puppeteer
     const pdfRelativePath = await htmlToPayslipPdf(htmlContent, payroll.user_id, payroll.id);
 
-    // 11. Update payroll record with the PDF path
-    await pool.query(`
-      UPDATE payroll 
-      SET 
-        payslip_path = $1, 
-        updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $2
-    `, [pdfRelativePath, id]);
+    // 11. Save the generated path in the DB so it persists on refresh
+    await pool.query(
+      `UPDATE payroll SET payslip_path = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [pdfRelativePath, id]
+    );
 
     res.status(200).json({
       success: true,

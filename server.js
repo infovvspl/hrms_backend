@@ -128,6 +128,8 @@ const payrollRoutes = require("./src/routes/payrollRoutes");
 const loginHistoryRoutes = require("./src/routes/loginHistoryRoutes");
 const resumeAnalyserRoutes = require("./src/routes/resumeAnalyserRoutes");
 const assetRoutes = require("./src/routes/assetRoutes");
+const travelRoutes = require("./src/routes/travelRoutes");
+const permissionRoutes = require("./src/routes/permissionRoutes");
 
 
 // ================= API ROUTES =================
@@ -163,6 +165,8 @@ app.use("/api/payroll", payrollRoutes);
 app.use("/api/login-history", loginHistoryRoutes);
 app.use("/api/resume-analyser", resumeAnalyserRoutes);
 app.use("/api/assets", assetRoutes);
+app.use("/api/travel", travelRoutes);
+app.use("/api/permissions", permissionRoutes);
 
 
 // ================= PROFILE ROUTE =================
