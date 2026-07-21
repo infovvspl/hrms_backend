@@ -17,16 +17,49 @@ exports.getPermissions = async (req, res) => {
     if (result.rows.length === 0) {
       const defaultPerms = [
         { name: "Dashboard View", desc: "Access the main company dashboard and summaries" },
-        { name: "Employee Directory", desc: "View and edit employee details and profiles" },
-        { name: "Attendance Management", desc: "Track, record and audit daily employee attendance" },
-        { name: "Payroll & Invoicing", desc: "Generate payslips, define salaries and review structures" },
-        { name: "Leave Management", desc: "Review, approve and manage leave requests" },
-        { name: "Asset Management", desc: "Assign and manage company-owned assets and hardware" },
-        { name: "Recruitment & Screening", desc: "Use resume analyser and schedule interview mailings" },
-        { name: "Travel Reimbursement", desc: "Review and approve employee travel reimbursement claims" },
-        { name: "Login History logs", desc: "Audit security login and session registry entries" },
-        { name: "Document Manager", desc: "Upload and audit official employment letters and documents" },
-      ];
+        { name: "My Dashboard View", desc: "Access employee personal dashboard" },
+        
+        { name: "My Profile View", desc: "Access own profile details" },
+        { name: "My Attendance View", desc: "Access own attendance records" },
+        { name: "My Leaves View", desc: "Access own leave overview" },
+        { name: "Apply Leave", desc: "Ability to apply for leave" },
+        { name: "My Leave History", desc: "Access own leave history" },
+        { name: "My Payroll View", desc: "Access own payroll and payslips" },
+        { name: "My Assets View", desc: "Access own assigned assets" },
+        { name: "My Travel View", desc: "Access own travel requests" },
+        { name: "My Documents View", desc: "Access own documents" },
+        { name: "My Login History View", desc: "Access own login history" },
+        { name: "Resignation Apply", desc: "Ability to apply for resignation" },
+
+        { name: "Employee List View", desc: "View all employees" },
+        { name: "Offer Letters Admin", desc: "Manage offer letters" },
+        { name: "Experience Letters Admin", desc: "Manage experience letters" },
+        { name: "Relieving Letters Admin", desc: "Manage relieving letters" },
+        { name: "Warning Letters Admin", desc: "Manage warning letters" },
+        { name: "Termination Letters Admin", desc: "Manage termination letters" },
+
+        { name: "Attendance Admin Dashboard", desc: "View attendance admin dashboard" },
+        { name: "Daily Tracking Admin", desc: "Manage daily tracking of employees" },
+        { name: "Shifts Admin", desc: "Manage company shifts" },
+
+        { name: "Holidays Admin", desc: "Manage company holidays" },
+        { name: "Holiday Calendar View", desc: "View holiday calendar" },
+
+        { name: "Leave Admin Dashboard", desc: "View leave admin dashboard" },
+        { name: "Leave Requests Admin", desc: "Manage employee leave requests" },
+        { name: "Leave Types Admin", desc: "Manage leave types configuration" },
+
+        { name: "Payroll Admin Dashboard", desc: "View payroll admin dashboard" },
+        { name: "Salary Details Admin", desc: "Manage employee salary details" },
+        { name: "Payslips Admin", desc: "Manage and generate payslips" },
+
+        { name: "Resume Analyser", desc: "Use resume analyser tool" },
+        { name: "Interview Scheduler", desc: "Schedule and manage interviews" },
+
+        { name: "Assets Admin", desc: "Manage company assets" },
+        { name: "Travel Admin", desc: "Manage travel requests" },
+        { name: "Company Login History", desc: "View company-wide login history" },
+];
 
       for (const p of defaultPerms) {
         await pool.query(

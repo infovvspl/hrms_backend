@@ -31,46 +31,47 @@ const {
 } = require("../controllers/userController");
 
 const auth = require("../middleware/authmiddleware");
+const checkPermission = require("../middleware/rbacMiddleware");
 const employeeUpload = require("../middleware/employeeUpload");
 
 // All user routes are protected by authentication middleware
-router.post("/", auth, employeeUpload, createEmployee);
-router.get("/", auth, getEmployees);
-router.get("/:id", auth, getEmployeeById);
-router.put("/:id", auth, employeeUpload, updateEmployee);
-router.delete("/:id", auth, deleteEmployee);
+router.post("/", auth, checkPermission("Employee Directory"), employeeUpload, createEmployee);
+router.get("/", auth, checkPermission("Employee Directory"), getEmployees);
+router.get("/:id", auth, checkPermission("Employee Directory"), getEmployeeById);
+router.put("/:id", auth, checkPermission("Employee Directory"), employeeUpload, updateEmployee);
+router.delete("/:id", auth, checkPermission("Employee Directory"), deleteEmployee);
 router.get("/me/branding", auth, getLoggedBranding);
 
 // Offer Letter
-router.post("/:id/generate-offer-letter", auth, generateEmployeeOfferLetter);
-router.get("/:id/download-offer-letter", auth, downloadEmployeeOfferLetterPdf);
-router.get("/:id/view-offer-letter", auth, getEmployeeOfferLetterHtml);
+router.post("/:id/generate-offer-letter", auth, checkPermission("Document Manager"), generateEmployeeOfferLetter);
+router.get("/:id/download-offer-letter", auth, checkPermission("Document Manager"), downloadEmployeeOfferLetterPdf);
+router.get("/:id/view-offer-letter", auth, checkPermission("Document Manager"), getEmployeeOfferLetterHtml);
 
 // Experience Letter
-router.post("/:id/generate-experience-letter", auth, generateEmployeeExperienceLetter);
-router.get("/:id/download-experience-letter", auth, downloadEmployeeExperienceLetterPdf);
-router.get("/:id/view-experience-letter", auth, getEmployeeExperienceLetterHtml);
+router.post("/:id/generate-experience-letter", auth, checkPermission("Document Manager"), generateEmployeeExperienceLetter);
+router.get("/:id/download-experience-letter", auth, checkPermission("Document Manager"), downloadEmployeeExperienceLetterPdf);
+router.get("/:id/view-experience-letter", auth, checkPermission("Document Manager"), getEmployeeExperienceLetterHtml);
 
 // Relieving Letter
-router.post("/:id/generate-relieving-letter", auth, generateEmployeeRelievingLetter);
-router.get("/:id/download-relieving-letter", auth, downloadEmployeeRelievingLetterPdf);
-router.get("/:id/view-relieving-letter", auth, getEmployeeRelievingLetterHtml);
+router.post("/:id/generate-relieving-letter", auth, checkPermission("Document Manager"), generateEmployeeRelievingLetter);
+router.get("/:id/download-relieving-letter", auth, checkPermission("Document Manager"), downloadEmployeeRelievingLetterPdf);
+router.get("/:id/view-relieving-letter", auth, checkPermission("Document Manager"), getEmployeeRelievingLetterHtml);
 
 // Warning Letters
-router.get("/:id/warning-letters", auth, getEmployeeWarningLetters);
-router.post("/:id/warning-letter", auth, createEmployeeWarningLetter);
+router.get("/:id/warning-letters", auth, checkPermission("Document Manager"), getEmployeeWarningLetters);
+router.post("/:id/warning-letter", auth, checkPermission("Document Manager"), createEmployeeWarningLetter);
 router.get("/warning-letter/:letterId/download", downloadEmployeeWarningLetterPdf);
 
 // Termination Letters
-router.get("/:id/termination-letters", auth, getEmployeeTerminationLetters);
-router.post("/:id/termination-letter", auth, createEmployeeTerminationLetter);
+router.get("/:id/termination-letters", auth, checkPermission("Document Manager"), getEmployeeTerminationLetters);
+router.post("/:id/termination-letter", auth, checkPermission("Document Manager"), createEmployeeTerminationLetter);
 router.get("/termination-letter/:letterId/download", downloadEmployeeTerminationLetterPdf);
 
 // Resignation Letters
-router.get("/:id/resignation-letters", auth, getEmployeeResignationLetters);
-router.post("/:id/resignation-letter", auth, createEmployeeResignationLetter);
-router.get("/:id/hr-manager", auth, getEmployeeHrManager);
-router.get("/resignations/all", auth, getAllResignationLetters);
-router.get("/resignation/:letterId", auth, getResignationLetterById);
+router.get("/:id/resignation-letters", auth, checkPermission("Document Manager"), getEmployeeResignationLetters);
+router.post("/:id/resignation-letter", auth, checkPermission("Document Manager"), createEmployeeResignationLetter);
+router.get("/:id/hr-manager", auth, checkPermission("Document Manager"), getEmployeeHrManager);
+router.get("/resignations/all", auth, checkPermission("Document Manager"), getAllResignationLetters);
+router.get("/resignation/:letterId", auth, checkPermission("Document Manager"), getResignationLetterById);
 
 module.exports = router;

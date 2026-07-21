@@ -9,10 +9,11 @@ const {
 } = require("../controllers/designationController");
 
 const auth = require("../middleware/authmiddleware");
+const checkCompanyRole = require("../middleware/companyRoleMiddleware");
 
-router.post("/", auth, createDesignation);
+router.post("/", auth, checkCompanyRole, createDesignation);
 router.get("/", auth, getDesignations);
-router.put("/:id", auth, updateDesignation);
-router.delete("/:id", auth, deleteDesignation);
+router.put("/:id", auth, checkCompanyRole, updateDesignation);
+router.delete("/:id", auth, checkCompanyRole, deleteDesignation);
 
 module.exports = router;

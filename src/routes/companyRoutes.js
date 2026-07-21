@@ -8,6 +8,7 @@ const {
 } = require("../controllers/CompanyController");
 
 const authMiddleware = require("../middleware/authmiddleware");
+const checkCompanyRole = require("../middleware/companyRoleMiddleware");
 const logoUpload = require("../middleware/logoUpload");
 
 // ====================================
@@ -17,9 +18,9 @@ const logoUpload = require("../middleware/logoUpload");
 router.post("/register", logoUpload, createCompany);
 
 // Get logged-in company
-router.get("/me", authMiddleware, getMyCompany);
+router.get("/me", authMiddleware, checkCompanyRole, getMyCompany);
 
 // Update logged-in company
-router.put("/update", authMiddleware, logoUpload, updateCompany);
+router.put("/update", authMiddleware, checkCompanyRole, logoUpload, updateCompany);
 
 module.exports = router;

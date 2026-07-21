@@ -8,12 +8,13 @@ const {
 } = require("../controllers/travelController");
 
 const auth = require("../middleware/authmiddleware");
+const checkPermission = require("../middleware/rbacMiddleware");
 const billUpload = require("../middleware/billUpload");
 
 // Travel Reimbursement routes
-router.post("/", auth, billUpload, createTravel);
-router.get("/me", auth, getMyTravelRequests);
-router.get("/", auth, getCompanyTravelRequests);
-router.put("/:id/status", auth, updateTravelStatus);
+router.post("/", auth, checkPermission("Travel Reimbursement"), billUpload, createTravel);
+router.get("/me", auth, checkPermission("Travel Reimbursement"), getMyTravelRequests);
+router.get("/", auth, checkPermission("Travel Reimbursement"), getCompanyTravelRequests);
+router.put("/:id/status", auth, checkPermission("Travel Reimbursement"), updateTravelStatus);
 
 module.exports = router;

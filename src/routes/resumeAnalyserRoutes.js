@@ -11,6 +11,7 @@ const {
   getInterviewHistory
 } = require("../controllers/resumeAnalyserController");
 const authMiddleware = require("../middleware/authmiddleware");
+const checkPermission = require("../middleware/rbacMiddleware");
 
 // ================= MULTER CONFIG =================
 // Ensure uploads/resumes directory exists
@@ -58,18 +59,18 @@ const upload = multer({
 // ================= ROUTES =================
 
 // POST /api/resume-analyser/analyse
-router.post("/analyse", authMiddleware, upload.array("resumes", 20), analyseResumes);
+router.post("/analyse", authMiddleware, checkPermission("Recruitment & Screening"), upload.array("resumes", 20), analyseResumes);
 
 // POST /api/resume-analyser/update-statuses
-router.post("/update-statuses", authMiddleware, updateCandidateStatuses);
+router.post("/update-statuses", authMiddleware, checkPermission("Recruitment & Screening"), updateCandidateStatuses);
 
 // GET /api/resume-analyser/shortlisted
-router.get("/shortlisted", authMiddleware, getShortlistedCandidates);
+router.get("/shortlisted", authMiddleware, checkPermission("Recruitment & Screening"), getShortlistedCandidates);
 
 // POST /api/resume-analyser/schedule-interview
-router.post("/schedule-interview", authMiddleware, scheduleInterview);
+router.post("/schedule-interview", authMiddleware, checkPermission("Recruitment & Screening"), scheduleInterview);
 
 // GET /api/resume-analyser/interview-history
-router.get("/interview-history", authMiddleware, getInterviewHistory);
+router.get("/interview-history", authMiddleware, checkPermission("Recruitment & Screening"), getInterviewHistory);
 
 module.exports = router;

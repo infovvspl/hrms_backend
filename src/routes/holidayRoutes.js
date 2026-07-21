@@ -9,10 +9,12 @@ const {
 } = require("../controllers/holidayController");
 
 const auth = require("../middleware/authmiddleware");
+const checkPermission = require("../middleware/rbacMiddleware");
+const checkCompanyRole = require("../middleware/companyRoleMiddleware");
 
-router.post("/", auth, createHoliday);
-router.get("/", auth, getHolidays);
-router.put("/:id", auth, updateHoliday);
-router.delete("/:id", auth, deleteHoliday);
+router.post("/", auth, checkCompanyRole, createHoliday);
+router.get("/", auth, checkPermission("Leave Management"), getHolidays);
+router.put("/:id", auth, checkCompanyRole, updateHoliday);
+router.delete("/:id", auth, checkCompanyRole, deleteHoliday);
 
 module.exports = router;

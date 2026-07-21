@@ -8,10 +8,11 @@ const {
 } = require("../controllers/permissionController");
 
 const auth = require("../middleware/authmiddleware");
+const checkCompanyRole = require("../middleware/companyRoleMiddleware");
 
-router.get("/", auth, getPermissions);
+router.get("/", auth, checkCompanyRole, getPermissions);
 router.get("/my-permissions", auth, getMyPermissions);
-router.get("/role/:roleId", auth, getRolePermissions);
-router.post("/role/:roleId", auth, updateRolePermissions);
+router.get("/role/:roleId", auth, checkCompanyRole, getRolePermissions);
+router.post("/role/:roleId", auth, checkCompanyRole, updateRolePermissions);
 
 module.exports = router;

@@ -11,13 +11,14 @@ const {
 } = require("../controllers/payrollController");
 
 const auth = require("../middleware/authmiddleware");
+const checkPermission = require("../middleware/rbacMiddleware");
 
 // Routing structure
-router.get("/salary-details", auth, getSalaryDetails);
-router.post("/salary-details", auth, updateSalaryDetails);
-router.post("/calculate", auth, calculatePayroll);
-router.get("/records", auth, getCalculatedPayroll);
-router.post("/generate", auth, generatePayslip);
-router.get("/my-payslips", auth, getMyPayslips);
+router.get("/salary-details", auth, checkPermission("Payroll & Invoicing"), getSalaryDetails);
+router.post("/salary-details", auth, checkPermission("Payroll & Invoicing"), updateSalaryDetails);
+router.post("/calculate", auth, checkPermission("Payroll & Invoicing"), calculatePayroll);
+router.get("/records", auth, checkPermission("Payroll & Invoicing"), getCalculatedPayroll);
+router.post("/generate", auth, checkPermission("Payroll & Invoicing"), generatePayslip);
+router.get("/my-payslips", auth, checkPermission("Payroll & Invoicing"), getMyPayslips);
 
 module.exports = router;

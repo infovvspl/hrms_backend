@@ -22,32 +22,33 @@ const {
 } = require("../controllers/assetController");
 
 const auth = require("../middleware/authmiddleware");
+const checkPermission = require("../middleware/rbacMiddleware");
 const billUpload = require("../middleware/billUpload");
 
 // ============================
 // ASSET ASSIGN ROUTES  (must be before /:id to avoid collision)
 // ============================
-router.get("/assign/me", auth, getMyAssets);
-router.post("/assign/create", auth, assignAsset);
-router.get("/assign/list", auth, getAssignments);
-router.put("/assign/:id", auth, updateAssignment);
-router.delete("/assign/:id", auth, deleteAssignment);
+router.get("/assign/me", auth, checkPermission("Asset Management"), getMyAssets);
+router.post("/assign/create", auth, checkPermission("Asset Management"), assignAsset);
+router.get("/assign/list", auth, checkPermission("Asset Management"), getAssignments);
+router.put("/assign/:id", auth, checkPermission("Asset Management"), updateAssignment);
+router.delete("/assign/:id", auth, checkPermission("Asset Management"), deleteAssignment);
 
 // ============================
 // ASSET REPAIR ROUTES  (must be before /:id to avoid collision)
 // ============================
-router.post("/repair/create", auth, createRepair);
-router.get("/repair/list", auth, getRepairs);
-router.put("/repair/:id", auth, updateRepair);
-router.delete("/repair/:id", auth, deleteRepair);
+router.post("/repair/create", auth, checkPermission("Asset Management"), createRepair);
+router.get("/repair/list", auth, checkPermission("Asset Management"), getRepairs);
+router.put("/repair/:id", auth, checkPermission("Asset Management"), updateRepair);
+router.delete("/repair/:id", auth, checkPermission("Asset Management"), deleteRepair);
 
 // ============================
 // ASSET ROUTES
 // ============================
-router.post("/", auth, billUpload, createAsset);
-router.get("/", auth, getAssets);
-router.get("/:id", auth, getAsset);
-router.put("/:id", auth, billUpload, updateAsset);
-router.delete("/:id", auth, deleteAsset);
+router.post("/", auth, checkPermission("Asset Management"), billUpload, createAsset);
+router.get("/", auth, checkPermission("Asset Management"), getAssets);
+router.get("/:id", auth, checkPermission("Asset Management"), getAsset);
+router.put("/:id", auth, checkPermission("Asset Management"), billUpload, updateAsset);
+router.delete("/:id", auth, checkPermission("Asset Management"), deleteAsset);
 
 module.exports = router;
