@@ -28,7 +28,7 @@ const billUpload = require("../middleware/billUpload");
 // ============================
 // ASSET ASSIGN ROUTES  (must be before /:id to avoid collision)
 // ============================
-router.get("/assign/me", auth, checkPermission("Asset Management"), getMyAssets);
+router.get("/assign/me", auth, getMyAssets);
 router.post("/assign/create", auth, checkPermission("Asset Management"), assignAsset);
 router.get("/assign/list", auth, checkPermission("Asset Management"), getAssignments);
 router.put("/assign/:id", auth, checkPermission("Asset Management"), updateAssignment);

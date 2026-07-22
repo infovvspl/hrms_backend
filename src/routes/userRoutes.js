@@ -37,8 +37,15 @@ const employeeUpload = require("../middleware/employeeUpload");
 // All user routes are protected by authentication middleware
 router.post("/", auth, checkPermission("Employee Directory"), employeeUpload, createEmployee);
 router.get("/", auth, checkPermission("Employee Directory"), getEmployees);
-router.get("/:id", auth, checkPermission("Employee Directory"), getEmployeeById);
-router.put("/:id", auth, checkPermission("Employee Directory"), employeeUpload, updateEmployee);
+router.get("/:id", auth, getEmployeeById);
+router.put("/:id", auth, (req, res, next) => {
+  // If user is updating their own profile, require 'Update My Profile' permission
+  if (String(req.params.id) === String(req.user.id)) {
+    return checkPermission("Update My Profile")(req, res, next);
+  }
+  // Otherwise, require 'Employee Directory' permission to edit other profiles
+  return checkPermission("Employee Directory")(req, res, next);
+}, employeeUpload, updateEmployee);
 router.delete("/:id", auth, checkPermission("Employee Directory"), deleteEmployee);
 router.get("/me/branding", auth, getLoggedBranding);
 

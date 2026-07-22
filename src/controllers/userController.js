@@ -1414,10 +1414,14 @@ exports.generateEmployeeOfferLetter = async (req, res) => {
     const company_id = req.user.company_id;
     const user_id = req.user.id;
 
+    const template = req.body.template ? parseInt(req.body.template) : 1;
+
     const employeeRes = await client.query(
-      `SELECT u.*, d.id as doc_id
+      `SELECT u.*, d.id as doc_id,
+              sd.basic, sd.hra, sd.da, sd.ta, sd.allowance, sd.pf, sd.esic, sd.tax
        FROM users u
        LEFT JOIN documents d ON u.document_id = d.id
+       LEFT JOIN salary_details sd ON u.id = sd.user_id
        WHERE u.id = $1 AND u.company_id = $2`,
       [id, company_id]
     );
@@ -1430,6 +1434,16 @@ exports.generateEmployeeOfferLetter = async (req, res) => {
     }
 
     const employee = employeeRes.rows[0];
+
+    const basic = parseFloat(employee.basic || 0);
+    const hra = parseFloat(employee.hra || 0);
+    const da = parseFloat(employee.da || 0);
+    const ta = parseFloat(employee.ta || 0);
+    const allowance = parseFloat(employee.allowance || 0);
+    const pf = parseFloat(employee.pf || 0);
+    const esic = parseFloat(employee.esic || 0);
+    const tax = parseFloat(employee.tax || 0);
+    const netSalary = (basic + hra + da + ta + allowance) - (pf + esic + tax);
 
     const signaturesArray = await getHrAndCeoSignatures(client, company_id);
 
@@ -1448,7 +1462,17 @@ exports.generateEmployeeOfferLetter = async (req, res) => {
       employment_type: employee.employment_type,
       department_id: employee.department_id,
       designation_id: employee.designation_id,
-      signatures: signaturesArray
+      signatures: signaturesArray,
+      present_address1: employee.present_address1,
+      present_address2: employee.present_address2,
+      present_city: employee.present_city,
+      present_state: employee.present_state,
+      present_pincode: employee.present_pincode,
+      gender: employee.gender,
+      emergency_contact_name: employee.emergency_contact_name,
+      emergency_contact_relation: employee.emergency_contact_relation,
+      salary: netSalary,
+      template: template
     });
     // Save PDF and get path
     const offer_letter = await htmlToPdf(offerHtml, employee.id);
@@ -1873,9 +1897,13 @@ exports.getEmployeeOfferLetterHtml = async (req, res) => {
     const { id } = req.params;
     const company_id = req.user.company_id;
 
+    const template = req.query.template ? parseInt(req.query.template) : 1;
+
     const employeeRes = await client.query(
-      `SELECT u.* 
-       FROM users u 
+      `SELECT u.*,
+              sd.basic, sd.hra, sd.da, sd.ta, sd.allowance, sd.pf, sd.esic, sd.tax
+       FROM users u
+       LEFT JOIN salary_details sd ON u.id = sd.user_id
        WHERE u.id = $1 AND u.company_id = $2`,
       [id, company_id]
     );
@@ -1885,6 +1913,16 @@ exports.getEmployeeOfferLetterHtml = async (req, res) => {
     }
 
     const employee = employeeRes.rows[0];
+
+    const basic = parseFloat(employee.basic || 0);
+    const hra = parseFloat(employee.hra || 0);
+    const da = parseFloat(employee.da || 0);
+    const ta = parseFloat(employee.ta || 0);
+    const allowance = parseFloat(employee.allowance || 0);
+    const pf = parseFloat(employee.pf || 0);
+    const esic = parseFloat(employee.esic || 0);
+    const tax = parseFloat(employee.tax || 0);
+    const netSalary = (basic + hra + da + ta + allowance) - (pf + esic + tax);
 
     const signaturesArray = await getHrAndCeoSignatures(client, company_id);
 
@@ -1901,7 +1939,17 @@ exports.getEmployeeOfferLetterHtml = async (req, res) => {
       employment_type: employee.employment_type,
       department_id: employee.department_id,
       designation_id: employee.designation_id,
-      signatures: signaturesArray
+      signatures: signaturesArray,
+      present_address1: employee.present_address1,
+      present_address2: employee.present_address2,
+      present_city: employee.present_city,
+      present_state: employee.present_state,
+      present_pincode: employee.present_pincode,
+      gender: employee.gender,
+      emergency_contact_name: employee.emergency_contact_name,
+      emergency_contact_relation: employee.emergency_contact_relation,
+      salary: netSalary,
+      template: template
     });
 
     if (htmlContent && htmlContent.startsWith("data:text/html;base64,")) {

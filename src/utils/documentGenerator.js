@@ -1,6 +1,6 @@
 const renderSignaturesAndStamp = (signatures, stamp, companyName) => {
   let html = `<div style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; margin-top: 40px; gap: 20px; width: 100%;">`;
-  
+
   let signatureArray = [];
   if (Array.isArray(signatures)) {
     signatureArray = signatures;
@@ -53,7 +53,7 @@ const renderSignaturesAndStamp = (signatures, stamp, companyName) => {
         <div style="font-size: 8px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px;">Official Stamp</div>
       </div>
     `;
-  }                                             
+  }
   html += `</div>`;
   return html;
 };
@@ -72,7 +72,8 @@ const generateOfferLetter = async (client, employeeDetails) => {
     employment_type,
     department_id,
     designation_id,
-    signatures
+    signatures,
+    template
   } = employeeDetails;
 
   const fullName = [first_name, middle_name, last_name].filter(Boolean).join(" ");
@@ -184,6 +185,217 @@ const generateOfferLetter = async (client, employeeDetails) => {
     if (res.rows.length > 0) {
       employmentTypeName = res.rows[0].employment_type_name;
     }
+  }
+
+  // If Template 2 is selected
+  if (String(template) === "2") {
+    const genderLower = (employeeDetails.gender || "").toLowerCase();
+    const prefix = genderLower === "female" ? "Ms." : genderLower === "male" ? "Mr." : "Ms./Mr.";
+
+    let relationPrefix = "S/o";
+    if (genderLower === "female") {
+      relationPrefix = "D/o";
+    }
+
+    let relationLine = "";
+    if (employeeDetails.emergency_contact_name) {
+      relationLine = `\n    <div>${relationPrefix} ${employeeDetails.emergency_contact_name}</div>`;
+    }
+
+    const addrParts = [
+      employeeDetails.present_address1,
+      employeeDetails.present_address2,
+      employeeDetails.present_city,
+      employeeDetails.present_state,
+      employeeDetails.present_pincode ? `${employeeDetails.present_pincode}` : null
+    ].filter(Boolean);
+    const addressHtml = addrParts.join("<br>\n    ") || companyAddress;
+
+    const salaryVal = parseFloat(employeeDetails.salary || 0);
+    const salaryFormatted = salaryVal.toLocaleString("en-IN");
+    const salaryWords = salaryVal > 0 ? numberToWords(Math.round(salaryVal)) : "Zero";
+
+    const renderTemplate2Signatures = (signatures, stamp, companyName) => {
+      let signatureHtml = "";
+      if (signatures && signatures.length > 0) {
+        signatures.forEach(sig => {
+          let sigSrc = "";
+          if (sig.signature_path) {
+            const cleanSigPath = sig.signature_path.startsWith('/') ? sig.signature_path.substring(1) : sig.signature_path;
+            sigSrc = sig.signature_path.startsWith('http') ? sig.signature_path : `http://localhost:5000/${cleanSigPath}`;
+          }
+          signatureHtml += `
+            <div style="margin-top: 10px; min-width: 150px; margin-right: 35px; display: inline-block; vertical-align: bottom;">
+              <div style="height: 45px; margin-top: 5px;">
+                ${sigSrc ? `<img src="${sigSrc}" style="height: 45px; max-width: 150px; object-fit: contain;" />` : ''}
+              </div>
+              <div style="font-weight: 700; font-size: 13px; color: #000000; margin-top: 5px; border-top: 1px solid #cbd5e1; padding-top: 2px;">(${sig.label || 'Authorized Signatory'})</div>
+              <div style="font-size: 11px; color: #475569;">Authorized Signatory</div>
+            </div>
+          `;
+        });
+      } else {
+        signatureHtml = `
+          <div style="margin-top: 10px; font-size: 13px; color: #000000; display: inline-block; vertical-align: bottom;">
+            <div style="height: 45px; margin-top: 5px;"></div>
+            <div style="font-weight: 700; border-top: 1px solid #cbd5e1; padding-top: 2px;">(Authorized Signatory)</div>
+            <div style="font-size: 11px; color: #475569;">Managing Director</div>
+          </div>
+        `;
+      }
+
+      let stampHtml = "";
+      if (stamp) {
+        const cleanStampPath = stamp.startsWith('/') ? stamp.substring(1) : stamp;
+        const stampSrc = stamp.startsWith('http') ? stamp : `http://localhost:5000/${cleanStampPath}`;
+        stampHtml = `
+          <div style="text-align: center; margin-left: auto; align-self: flex-end; padding-right: 20px; display: inline-block;">
+            <img src="${stampSrc}" style="height: 65px; width: 65px; object-fit: contain; opacity: 0.85;" />
+            <div style="font-size: 8px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px;">Official Stamp</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="margin-top: 25px; width: 100%;">
+          <div style="font-size: 13px; color: #000000;">For <strong>${companyName}</strong></div>
+          <div style="display: flex; align-items: flex-end; justify-content: flex-start; flex-wrap: wrap;">
+            ${signatureHtml}
+            ${stampHtml}
+          </div>
+        </div>
+      `;
+    };
+
+    const formattedDoj = doj
+      ? new Date(doj).toLocaleDateString("en-GB").replace(/\//g, ".")
+      : "To Be Announced";
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    color: #000000;
+    line-height: 1.5;
+    padding: 0;
+    margin: 0;
+    background-color: #f1f5f9;
+  }
+  .container {
+    width: 800px;
+    height: 1120px;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 40px 50px 30px 50px;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  @media screen and (max-width: 820px) {
+    body {
+      zoom: 0.8;
+      background-color: #ffffff;
+    }
+    .container {
+      margin: 0 auto;
+      box-shadow: none;
+      padding: 30px 40px;
+    }
+  }
+  @media screen and (max-width: 650px) {
+    body {
+      zoom: 0.65;
+    }
+  }
+  @media screen and (max-width: 500px) {
+    body {
+      zoom: 0.5;
+    }
+  }
+  @media print {
+    body {
+      background-color: #ffffff;
+      padding: 0;
+    }
+    .container {
+      margin: 0;
+      box-shadow: none;
+      width: 100%;
+      height: 1120px;
+      padding: 40px 50px 30px 50px;
+      overflow: hidden;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div style="font-size: 13px; line-height: 1.4; color: #000000; margin-bottom: 15px;">
+    <strong>To</strong><br>
+    <strong>${prefix} ${fullName}</strong>${relationLine}<br>
+    ${addressHtml}
+  </div>
+
+  <div style="font-weight: 700; font-size: 13.5px; margin-bottom: 12px;">
+    Sub: Offer Letter
+  </div>
+
+  <div style="font-size: 12.5px; line-height: 1.5; text-align: justify; margin-bottom: 10px;">
+    We are pleased to offer you appointment with our company <strong>${companyName}</strong> as <strong>${designationName !== "N/A" ? designationName : roleName}</strong>.
+  </div>
+
+  <div style="font-size: 12.5px; line-height: 1.5; margin-bottom: 10px;">
+    This offer letter is issued after your interview on the terms and conditions detailed as follows: -
+  </div>
+
+  <table style="margin: 10px 0 10px 30px; border-collapse: collapse; font-size: 12.5px; line-height: 1.5; color: #000000; width: auto;">
+    <tr>
+      <td style="font-weight: 700; width: 220px; padding: 2px 0; vertical-align: top;">Date of Joining</td>
+      <td style="padding: 2px 10px; vertical-align: top;">:</td>
+      <td style="font-weight: 700; padding: 2px 0; vertical-align: top;">${formattedDoj}</td>
+    </tr>
+    <tr>
+      <td style="font-weight: 700; padding: 2px 0; vertical-align: top;">Location</td>
+      <td style="padding: 2px 10px; vertical-align: top;">:</td>
+      <td style="padding: 2px 0; vertical-align: top;"><strong>${companyName}</strong><br>${branchName}</td>
+    </tr>
+    <tr>
+      <td style="font-weight: 700; padding: 2px 0; vertical-align: top;">Department</td>
+      <td style="padding: 2px 10px; vertical-align: top;">:</td>
+      <td style="padding: 2px 0; vertical-align: top;"><strong>${departmentName !== "N/A" ? departmentName : "assigned"}</strong></td>
+    </tr>
+    <tr>
+      <td style="font-weight: 700; padding: 2px 0; vertical-align: top;">Salary Per Month (in hand)</td>
+      <td style="padding: 2px 10px; vertical-align: top;">:</td>
+      <td style="font-weight: 700; padding: 2px 0; vertical-align: top;">Rs.${salaryFormatted}/- <span style="font-weight: normal; color: #374151;">(Rupees ${salaryWords})</span></td>
+    </tr>
+  </table>
+
+  <div style="font-weight: 700; text-decoration: underline; margin-top: 15px; margin-bottom: 8px; font-size: 13px;">Terms of the Job Offer:-</div>
+  <ol style="padding-left: 20px; margin: 0; font-size: 12.5px; line-height: 1.4; color: #000000;">
+    <li style="margin-bottom: 6px; text-align: justify;">You will be under probation for <strong>3 months</strong> from the date of joining. No leaves are allowed during the probation period.</li>
+    <li style="margin-bottom: 6px; text-align: justify;">After successful completion of your probation period, your name will be entered in statutory records pertaining to your employment in the organization, making you eligible for P.F., ESIC and other social security schemes as mandated by the Government of India.</li>
+    <li style="margin-bottom: 6px; text-align: justify;">Detailed service rules and regulation including conduct, discipline and up-to-date administrative orders shall be provided to you along with the appointment letter.</li>
+    <li style="margin-bottom: 6px; text-align: justify;">You have to be present yourself on the joining date with all originals and self-attested 1 (one) photocopy set of academic credentials (Matriculation to Professional Qualifications), PAN, Aadhar Card.</li>
+    <li style="margin-bottom: 6px; text-align: justify;">You are required to give a minimum notice of one month or one month’s salary, in case you wish to leave the organization any time during the tenure of your employment.</li>
+  </ol>
+
+  <div style="font-size: 12.5px; line-height: 1.4; text-align: justify; margin-top: 12px; margin-bottom: 8px;">
+    You will be covered by the service rules and regulations including conduct, discipline and administrative orders and any such other rules or orders of the company that may come in force from time to time. Please sign one copy of this letter and return it to our office to formalize your acceptance of this offer.
+  </div>
+
+  <div style="font-size: 12.5px; line-height: 1.4; margin-bottom: 15px;">
+    I look forward to have a mutually rewarding working relationship.
+  </div>
+
+  ${renderTemplate2Signatures(signatures, companyStamp, companyName)}
+</div>
+</body>
+</html>`;
   }
 
   const htmlContent = `<!DOCTYPE html>
@@ -478,7 +690,7 @@ const generateOfferLetter = async (client, employeeDetails) => {
             </svg>`
     }
         <div class="company-info-text">
-          <div class="logo-name">${companyName}</div>
+          ${(companyName.toLowerCase().includes("technova") && companyLogo) ? '' : `<div class="logo-name">${companyName}</div>`}
           <div class="logo-tagline">www.${companyName.toLowerCase().replace(/[^a-z0-9]/g, "") || "company"}.com</div>
         </div>
       </div>
@@ -1643,7 +1855,7 @@ const numberToWords = (num) => {
 
   if (num === 0) return 'Zero';
   let words = '';
-  
+
   const crore = Math.floor(num / 10000000);
   num %= 10000000;
   if (crore) words += h(crore) + ' Crore ';
@@ -1664,17 +1876,17 @@ const numberToWords = (num) => {
 
 const generatePayslipHtml = (employee, payroll, company, salary, paidMonthsCount, ytd) => {
   const fullName = [employee.first_name, employee.middle_name, employee.last_name].filter(Boolean).join(" ");
-  
+
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
   const monthName = monthNames[parseInt(payroll.month, 10) - 1] || payroll.month;
-  
-  const dojStr = employee.doj 
+
+  const dojStr = employee.doj
     ? new Date(employee.doj).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
     : "To Be Announced";
-    
+
   // Calculate Pay Date as the last day of the given month/year
   const payDate = new Date(payroll.year, parseInt(payroll.month, 10), 0);
   const payDateStr = payDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });

@@ -18,7 +18,7 @@ const logoUpload = require("../middleware/logoUpload");
 router.post("/register", logoUpload, createCompany);
 
 // Get logged-in company
-router.get("/me", authMiddleware, checkCompanyRole, getMyCompany);
+router.get("/me", authMiddleware, getMyCompany);
 
 // Update logged-in company
 router.put("/update", authMiddleware, checkCompanyRole, logoUpload, updateCompany);

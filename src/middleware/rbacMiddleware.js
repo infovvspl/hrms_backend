@@ -17,9 +17,12 @@ const checkPermission = (requiredPermission) => {
         return next();
       }
 
-      // 2. Fetch the employee's role_id from the users table
+      // 2. Fetch the employee's role info from the database
       const empResult = await pool.query(
-        `SELECT role_id FROM users WHERE id = $1`,
+        `SELECT u.role_id, r.role_name 
+         FROM users u
+         LEFT JOIN roles r ON u.role_id = r.id
+         WHERE u.id = $1`,
         [id]
       );
 
@@ -30,7 +33,13 @@ const checkPermission = (requiredPermission) => {
         });
       }
 
-      const role_id = empResult.rows[0].role_id;
+      const { role_id, role_name } = empResult.rows[0];
+
+      // 3. Admin/Manager roles automatically bypass permission checks
+      const adminRoles = ["HR Manager", "Super Admin", "IT Admin", "Admin"];
+      if (adminRoles.includes(role_name)) {
+        return next();
+      }
 
       // 3. Check if the role_id is mapped to the required permission
       const permsResult = await pool.query(
